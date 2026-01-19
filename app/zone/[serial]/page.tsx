@@ -1,8 +1,10 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+
+type ZonePageProps = {
+  params: { serial: string };
+};
 
 type DemoData = {
   location: string;
@@ -12,69 +14,52 @@ type DemoData = {
   humidity: number;
   solarKw: number;
   wind: number;
-  soilPH: number;
-  salinityEC: number;
   cooling: boolean;
   irrigation: boolean;
+  ph: number;
+  salinity: number;
 };
 
-function randInt(min: number, max: number) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-function randFloat(min: number, max: number, decimals = 2) {
-  const n = Math.random() * (max - min) + min;
-  return +n.toFixed(decimals);
-}
-
-function pick<T>(arr: T[]) {
-  return arr[Math.floor(Math.random() * arr.length)];
+function rand(min: number, max: number) {
+  return Math.round((min + Math.random() * (max - min)) * 10) / 10;
 }
 
 function buildRandomDemo(): DemoData {
-  const location = pick([
-    "Al Ain Oasis",
-    "Liwa Date Farms",
-    "Al Dhafra",
-    "Al Foah",
-    "Al Jimi Agricultural Area",
-  ]);
+  const airTemp = Math.round(rand(34, 48));
+  const humidity = Math.round(rand(15, 55));
+  const soilMoisture = Math.round(rand(10, 55));
+  const solarKw = rand(0.2, 1.3);
+  const wind = Math.round(rand(0, 18));
+  const ph = rand(6.5, 8.3);
+  const salinity = rand(0.5, 5.5);
 
-  const airTemp = randInt(35, 50); // °C
-  const soilMoisture = randInt(15, 65); // %
-  const humidity = randInt(15, 60); // %
-  const solarKw = randFloat(0.2, 1.8, 2); // kW
-  const wind = randInt(0, 18); // km/h
-  const soilPH = randFloat(6.6, 9.2, 1); // pH
-  const salinityEC = randFloat(1.0, 10.0, 1); // dS/m
-
-  const cooling = airTemp >= 46 && solarKw >= 0.6;
-  const irrigation = soilMoisture <= 28 || (salinityEC >= 7.5 && soilMoisture <= 35);
+  // Simple “AI” decisions (demo logic)
+  const cooling = airTemp >= 42 || (airTemp >= 39 && humidity >= 40);
+  const irrigation = soilMoisture <= 25;
 
   return {
-    location,
+    location: "Al Ain Oasis",
     lastUpdated: "Just now",
     airTemp,
     soilMoisture,
     humidity,
     solarKw,
     wind,
-    soilPH,
-    salinityEC,
     cooling,
     irrigation,
+    ph,
+    salinity,
   };
 }
 
-export default function ZonePage() {
-  const routeParams = useParams<{ serial: string }>();
-  const serial = decodeURIComponent(routeParams?.serial ?? "unknown");
+export default function ZonePage({ params }: ZonePageProps) {
+  const serial = useMemo(() => decodeURIComponent(params.serial), [params.serial]);
 
-  // ✅ Hydration-safe: start with null, fill after mount
+  // Important: start with null to avoid hydration mismatch,
+  // then randomize on client once page loads.
   const [demo, setDemo] = useState<DemoData | null>(null);
 
   useEffect(() => {
-    // Runs only in browser after hydration
     setDemo(buildRandomDemo());
   }, []);
 
@@ -84,11 +69,6 @@ export default function ZonePage() {
         <div className="mx-auto max-w-3xl">
           <h1 className="text-2xl font-extrabold text-[#1C1F1E]">Zone Dashboard</h1>
           <p className="mt-2 text-[#5E5E5E]">Loading sensor data…</p>
-
-          <div className="mt-6 rounded-2xl border border-[#E2D6C2] bg-[#F7F5F0] p-5">
-            <p className="text-sm font-semibold text-[#5E5E5E]">Serial</p>
-            <p className="mt-1 text-xl font-extrabold text-[#1C1F1E]">{serial}</p>
-          </div>
         </div>
       </main>
     );
@@ -103,84 +83,79 @@ export default function ZonePage() {
       ? "Irrigation Activated"
       : "Normal";
 
-  const phLabel =
-    demo.soilPH < 6.5 ? "Acidic (risk)" : demo.soilPH <= 7.8 ? "Near optimal" : "Alkaline";
-
-  const salinityLabel =
-    demo.salinityEC < 2
-      ? "Low"
-      : demo.salinityEC < 4
-      ? "Moderate"
-      : demo.salinityEC < 8
-      ? "High"
-      : "Very high";
-
   return (
-    <main className="min-h-screen bg-[#E9DCC7] p-6">
+    <main className="min-h-screen bg-[#E9DCC7] pb-24 p-6">
       <div className="mx-auto max-w-3xl">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-extrabold text-[#1C1F1E]">Zone Dashboard</h1>
-
-            <p className="mt-1 font-semibold text-[#2E6B4F]">
-              Serial: <span className="text-[#1C1F1E]">{serial}</span>
+            <p className="mt-1 text-[#5E5E5E]">
+              Serial: <span className="font-semibold text-[#1C1F1E]">{serial}</span>
             </p>
-
-            <p className="mt-1 text-sm font-medium text-[#5E5E5E]">
-              Location: <span className="text-[#1C1F1E]">{demo.location}</span> • Last updated:{" "}
-              <span className="text-[#1C1F1E]">{demo.lastUpdated}</span>
+            <p className="mt-1 text-sm text-[#5E5E5E]">
+              Location: {demo.location} • Last updated: {demo.lastUpdated}
             </p>
           </div>
 
-          <Link
-            href="/"
-            className="rounded-2xl border border-[#E2D6C2] bg-[#F7F5F0] px-4 py-2 font-bold text-[#1C1F1E]"
+          <button
+            onClick={() => setDemo(buildRandomDemo())}
+            className="rounded-xl border border-[#E2D6C2] bg-white px-4 py-2 font-semibold text-[#1C1F1E] hover:bg-[#F7F5F0]"
           >
-            Change serial
-          </Link>
+            Refresh Data
+          </button>
         </div>
 
-        <div className="mt-6 rounded-2xl border border-[#E2D6C2] bg-[#F7F5F0] p-5">
+        <div className="mt-6 rounded-2xl border border-[#E2D6C2] bg-white p-5">
           <p className="text-sm font-semibold text-[#5E5E5E]">AI Status</p>
-          <p className="mt-1 text-xl font-extrabold text-[#1C1F1E]">{aiStatus}</p>
+          <p className="mt-1 text-2xl font-extrabold text-[#1C1F1E]">{aiStatus}</p>
+          <p className="mt-2 text-sm text-[#5E5E5E]">
+            Demo simulation: values randomize on load and when you press Refresh.
+          </p>
+        </div>
 
-          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Card label="Air Temperature" value={`${demo.airTemp}°C`} />
-            <Card label="Soil Moisture" value={`${demo.soilMoisture}%`} />
-            <Card label="Humidity" value={`${demo.humidity}%`} />
-            <Card label="Solar Output" value={`${demo.solarKw} kW`} />
-            <Card label="Wind" value={`${demo.wind} km/h`} />
-
-            <div className="rounded-2xl border border-[#E2D6C2] bg-white p-4">
-              <p className="text-sm font-semibold text-[#5E5E5E]">Soil pH</p>
-              <p className="mt-1 text-2xl font-extrabold text-[#1C1F1E]">{demo.soilPH}</p>
-              <p className="mt-1 text-xs font-semibold text-[#5E5E5E]">{phLabel}</p>
-            </div>
-
-            <div className="rounded-2xl border border-[#E2D6C2] bg-white p-4">
-              <p className="text-sm font-semibold text-[#5E5E5E]">Salinity (EC)</p>
-              <p className="mt-1 text-2xl font-extrabold text-[#1C1F1E]">
-                {demo.salinityEC} dS/m
-              </p>
-              <p className="mt-1 text-xs font-semibold text-[#5E5E5E]">{salinityLabel}</p>
-            </div>
-
-            <div className="rounded-2xl border border-[#E2D6C2] bg-white p-4 sm:col-span-2">
-              <p className="text-sm font-semibold text-[#5E5E5E]">Systems</p>
-
-              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <SystemPill label="Cooling" on={demo.cooling} />
-                <SystemPill label="Irrigation" on={demo.irrigation} />
-              </div>
-
-              <p className="mt-3 text-xs text-[#5E5E5E]">
-                Note: Values randomize after load each time the page is opened/refreshed (demo
-                simulation).
-              </p>
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Card label="Air Temperature" value={`${demo.airTemp}°C`} />
+          <Card label="Humidity" value={`${demo.humidity}%`} />
+          <Card label="Soil Moisture" value={`${demo.soilMoisture}%`} />
+          <Card label="Solar Power" value={`${demo.solarKw} kW`} />
+          <Card label="Wind" value={`${demo.wind} km/h`} />
+          <Card label="Soil pH" value={`${demo.ph}`} />
+          <Card label="Soil Salinity" value={`${demo.salinity} dS/m`} />
+          <div className="rounded-2xl border border-[#E2D6C2] bg-white p-4">
+            <p className="text-sm font-semibold text-[#5E5E5E]">Systems</p>
+            <div className="mt-3 grid grid-cols-1 gap-3">
+              <SystemPill label="Cooling" on={demo.cooling} />
+              <SystemPill label="Irrigation" on={demo.irrigation} />
             </div>
           </div>
         </div>
       </div>
+
+      {/* Bottom Tab Bar */}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#E2D6C2] bg-white/95 backdrop-blur">
+        <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
+          <a
+            href={`/zone/${encodeURIComponent(serial)}`}
+            className="flex-1 text-center font-bold text-[#1C1F1E]"
+          >
+            Dashboard
+          </a>
+
+          <a
+            href="/heritage"
+            className="flex-1 text-center font-semibold text-[#5E5E5E] hover:text-[#1C1F1E]"
+          >
+            Heritage
+          </a>
+
+          <a
+            href={`/history/${encodeURIComponent(serial)}`}
+            className="flex-1 text-center font-semibold text-[#5E5E5E] hover:text-[#1C1F1E]"
+          >
+            History
+          </a>
+        </div>
+      </nav>
     </main>
   );
 }
@@ -195,14 +170,14 @@ function Card({ label, value }: { label: string; value: string }) {
 }
 
 function SystemPill({ label, on }: { label: string; on: boolean }) {
-  const pillClass = on
-    ? "bg-[#D9F2E4] text-[#2E6B4F]"
-    : "bg-[#F1EDE5] text-[#5E5E5E]";
-
   return (
-    <div className="flex items-center justify-between rounded-2xl border border-[#E2D6C2] bg-[#F7F5F0] px-4 py-3">
+    <div className="flex items-center justify-between rounded-2xl border border-[#E2D6C2] bg-[#F7F5F0] px-3 py-2">
       <span className="font-semibold text-[#1C1F1E]">{label}</span>
-      <span className={`rounded-full px-3 py-1 text-sm font-bold ${pillClass}`}>
+      <span
+        className={`rounded-full px-3 py-1 text-xs font-bold ${
+          on ? "bg-[#D9F2E4] text-[#1C1F1E]" : "bg-[#F1EDE5] text-[#5E5E5E]"
+        }`}
+      >
         {on ? "ON" : "OFF"}
       </span>
     </div>

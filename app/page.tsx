@@ -4,8 +4,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export default function Home() {
-  const [serial, setSerial] = useState("");
   const router = useRouter();
+  const [serial, setSerial] = useState("");
 
   function go() {
     const s = serial.trim();
@@ -14,40 +14,44 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen bg-[#E9DCC7] flex items-center justify-center p-6">
-      <div className="w-full max-w-md rounded-3xl bg-[#F7F5F0] p-8 shadow-xl border border-[#E2D6C2]">
-        <h1 className="text-3xl font-extrabold text-[#1C1F1E] text-center">
-          Nakheel Guard 🌴
+    <main
+      className="min-h-screen flex items-center justify-center bg-cover bg-center relative"
+      style={{ backgroundImage: "url('/palm-bg.jpg')" }}
+    >
+      {/* Dark overlay */}
+      <div className="absolute inset-0 bg-black/40" />
+
+      {/* Card */}
+      <div className="relative z-10 bg-white/90 backdrop-blur rounded-2xl p-6 w-full max-w-sm shadow-xl border border-[#E2D6C2]">
+        <h1 className="text-2xl font-extrabold text-[#1C1F1E] text-center">
+          Enter Zone Serial
         </h1>
-        <p className="mt-3 text-center text-[#2E6B4F] font-semibold">
-          Enter Zone Serial Number
+
+        <p className="mt-2 text-sm text-[#5E5E5E] text-center">
+          AI Solar Cooling & Irrigation for Palm Trees (UAE)
         </p>
 
-        <div className="mt-7">
-          <label className="block text-sm font-bold text-[#6B3F2A] mb-2">
-            Zone Serial
-          </label>
-          <input
-            value={serial}
-            onChange={(e) => setSerial(e.target.value)}
-            placeholder="e.g. NG-AIN-001"
-            className="w-full rounded-2xl border border-[#E2D6C2] bg-white px-4 py-3 text-center font-semibold text-[#1C1F1E] outline-none focus:ring-2 focus:ring-[#2AA6A1]"
-          />
-          <p className="mt-2 text-xs text-[#5E5E5E] font-medium text-center">
-            Your sensor data loads automatically after you enter the serial.
-          </p>
-        </div>
+        <input
+          value={serial}
+          onChange={(e) => setSerial(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") go();
+          }}
+          type="text"
+          placeholder="e.g. ZONE-001"
+          className="mt-6 w-full rounded-xl border border-[#E2D6C2] px-4 py-3 text-center text-lg focus:outline-none focus:ring-2 focus:ring-[#F7F5F0] bg-white"
+        />
 
         <button
           onClick={go}
-          className="mt-5 w-full rounded-2xl bg-[#2E6B4F] py-3 font-extrabold text-white hover:opacity-95 active:opacity-90"
+          className="mt-4 w-full rounded-xl bg-[#F7F5F0] py-3 font-bold text-[#1C1F1E] hover:bg-[#EDE8DF]"
         >
-          Access Zone
+          Enter Zone
         </button>
 
-        <div className="mt-6 text-center text-xs font-semibold text-[#2E6B4F]">
-          🇦🇪 Built for UAE palms • Solar cooling • Water-smart irrigation
-        </div>
+        <p className="mt-3 text-xs text-[#5E5E5E] text-center">
+          Tip: type a serial and press Enter.
+        </p>
       </div>
     </main>
   );
